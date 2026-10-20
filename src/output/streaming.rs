@@ -50,6 +50,8 @@ use crate::text::TextProcessor;
 use std::process::Stdio;
 use tokio::process::Command;
 
+mod modifier_release_tracking;
+
 /// A streaming output session: types finalized segments incrementally,
 /// tracks typed-character count, and supports cancel-rewind.
 ///
@@ -67,6 +69,7 @@ pub struct StreamingSession {
     typed_chars: usize,
     /// Most recent partial text (for status only; never typed).
     partial: String,
+    modifiers_released_since_start: bool,
 }
 
 impl StreamingSession {
@@ -76,6 +79,7 @@ impl StreamingSession {
             finalized_text: String::new(),
             typed_chars: 0,
             partial: String::new(),
+            modifiers_released_since_start: false,
         }
     }
 

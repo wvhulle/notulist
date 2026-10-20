@@ -4797,6 +4797,16 @@ impl Daemon {
                         &state,
                         State::Streaming { file_output_path: Some(_), .. }
                     );
+                    if output::held_modifier_safety::held_modifier_interrupts_typing(streaming_session.as_mut(), file_output, event.as_ref()).await {
+                        self.stop_active_recording(
+                            &mut state,
+                            &mut audio_capture,
+                            &mut streaming_session,
+                            &mut streaming_chain,
+                            &mut eager_transcriber,
+                        ).await;
+                        continue;
+                    }
                     match event {
                         Some(StreamingEvent::Partial { text, .. }) => {
                             if let Some(s) = streaming_session.as_mut() {
