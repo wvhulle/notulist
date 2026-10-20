@@ -12,7 +12,7 @@ pub async fn held_modifier_interrupts_typing(
     let Some(session) = session else {
         return false;
     };
-    if file_output || !carries_typed_text(event) {
+    if file_output || session.writes_into_input_method_field() || !carries_typed_text(event) {
         return false;
     }
     let interrupted = !modifiers_settled_for_typing(session).await;

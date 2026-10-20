@@ -50,6 +50,7 @@ use crate::text::TextProcessor;
 use std::process::Stdio;
 use tokio::process::Command;
 
+mod input_method_field_routing;
 mod modifier_release_tracking;
 
 /// A streaming output session: types finalized segments incrementally,
@@ -70,6 +71,7 @@ pub struct StreamingSession {
     /// Most recent partial text (for status only; never typed).
     partial: String,
     modifiers_released_since_start: bool,
+    input_method_field: Option<crate::output::input_method::InputMethodFieldWriter>,
 }
 
 impl StreamingSession {
@@ -80,6 +82,7 @@ impl StreamingSession {
             typed_chars: 0,
             partial: String::new(),
             modifiers_released_since_start: false,
+            input_method_field: None,
         }
     }
 
@@ -124,7 +127,7 @@ impl StreamingSession {
             wait_for_modifier_release: false,
             modifier_release_timeout: std::time::Duration::from_millis(0),
         };
-        output_with_fallback(chain, &new_partial, opts).await?;
+        self.emit_text(chain, &new_partial, opts).await?;
 
         self.typed_chars += new_partial.chars().count();
         self.partial.push_str(&new_partial);
@@ -217,7 +220,7 @@ impl StreamingSession {
             wait_for_modifier_release: false,
             modifier_release_timeout: std::time::Duration::from_millis(0),
         };
-        output_with_fallback(chain, text, opts).await?;
+        self.emit_text(chain, text, opts).await?;
 
         self.typed_chars += text.chars().count();
         // Treat the partial-stream-so-far plus this final tail as the
@@ -281,6 +284,9 @@ impl StreamingSession {
         pre_output_command: Option<&str>,
         post_output_command: Option<&str>,
     ) -> Result<(), OutputError> {
+        if self.input_method_field.is_some() {
+            return self.replace_in_input_method_field(backspace, text, text_processor);
+        }
         // Cap backspace at what we've actually typed.
         let n = backspace.min(self.typed_chars);
         if n > 0 {
@@ -366,6 +372,9 @@ impl StreamingSession {
     /// The session can be re-used after rewind, though the daemon
     /// typically discards it.
     pub async fn rewind(&mut self) -> Result<(), OutputError> {
+        if let Some(rewound) = self.rewind_input_method_field() {
+            return rewound;
+        }
         let count = self.typed_chars;
         if count == 0 {
             return Ok(());

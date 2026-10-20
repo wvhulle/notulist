@@ -379,11 +379,14 @@ pub enum OutputDriver {
     Clipboard,
     /// Clipboard via xclip (X11)
     Xclip,
+    #[serde(rename = "input-method")]
+    InputMethod,
 }
 
 impl std::fmt::Display for OutputDriver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OutputDriver::InputMethod => write!(f, "input-method"),
             OutputDriver::Wtype => write!(f, "wtype"),
             OutputDriver::Eitype => write!(f, "eitype"),
             OutputDriver::Dotool => write!(f, "dotool"),
@@ -405,8 +408,9 @@ impl std::str::FromStr for OutputDriver {
             "ydotool" => Ok(OutputDriver::Ydotool),
             "clipboard" => Ok(OutputDriver::Clipboard),
             "xclip" => Ok(OutputDriver::Xclip),
+            "input-method" => Ok(OutputDriver::InputMethod),
             _ => Err(format!(
-                "Unknown driver '{}'. Valid options: wtype, eitype, dotool, ydotool, clipboard, xclip",
+                "Unknown driver '{}'. Valid options: input-method, wtype, eitype, dotool, ydotool, clipboard, xclip",
                 s
             )),
         }

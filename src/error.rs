@@ -154,6 +154,9 @@ pub enum OutputError {
     #[error("Ctrl+V simulation failed: {0}")]
     CtrlVFailed(String),
 
+    #[error("No focused text field accepts input-method text")]
+    TextFieldNotFocused,
+
     #[error(
         "All output methods failed. Ensure wtype, dotool, ydotool, wl-copy, or xclip is available."
     )]

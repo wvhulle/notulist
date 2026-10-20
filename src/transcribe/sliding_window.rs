@@ -130,7 +130,7 @@ const MIN_SPEECH_RMS: f32 = 0.005;
 /// confirmed text and can never be revised again — this bounds how far
 /// back (in words, and therefore in backspaced characters) any single
 /// correction can ever reach.
-const REVISION_LAG_WORDS: usize = 4;
+pub(crate) const REVISION_LAG_WORDS: usize = 4;
 
 /// One committed change to the streamed output, produced by a tick or by
 /// `final_flush`.

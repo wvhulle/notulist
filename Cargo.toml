@@ -127,6 +127,7 @@ wayland-client = { version = "0.31", optional = true, features = ["system"] }
 wayland-backend = { version = "0.3", optional = true, features = ["client_system"] }
 wayland-protocols = { version = "0.32", optional = true, features = ["client", "staging"] }
 wayland-protocols-wlr = { version = "0.3", optional = true, features = ["client"] }
+wayland-protocols-misc = { version = "0.3", optional = true, features = ["client"] }
 wgpu = { version = "29", optional = true, default-features = false, features = ["vulkan", "gles", "wgsl", "std"] }
 egui = { version = "0.34", optional = true }
 egui-wgpu = { version = "0.34", optional = true, default-features = false }
@@ -188,6 +189,13 @@ osd-native = [
     "dep:bytemuck",
 ]
 osd-gtk4 = ["dep:gtk4", "dep:gtk4-layer-shell", "dep:cairo-rs", "dep:glib"]
+input-method = [
+    "dep:calloop",
+    "dep:calloop-wayland-source",
+    "dep:wayland-client",
+    "dep:wayland-backend",
+    "dep:wayland-protocols-misc",
+]
 gpu-vulkan = ["whisper-rs/vulkan"]
 gpu-cuda = ["whisper-rs/cuda"]
 gpu-metal = ["whisper-rs/metal"]
@@ -331,6 +339,10 @@ path = "src/bin/voxtype_mirror_registry.rs"
 [[example]]
 name = "inspect_cohere_onnx"
 required-features = ["cohere"]
+
+[[example]]
+name = "input_method_dictation_replay"
+required-features = ["input-method"]
 
 # TEMPORARY: openvino-genai 0.11.0's WhisperPipeline has no way to pass
 # device properties (CACHE_DIR etc.), unlike LlmPipeline/VlmPipeline in

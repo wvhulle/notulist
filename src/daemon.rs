@@ -1588,7 +1588,12 @@ impl Daemon {
 
         *audio_capture = Some(capture);
         *streaming_handle = Some(handle);
-        *streaming_session = Some(StreamingSession::new());
+        *streaming_session = Some(StreamingSession::new().with_input_method_field(
+            output::input_method::daemon_integration::field_writer_for_session(
+                &self.config.output,
+                file_output_path.is_some(),
+            ),
+        ));
         *streaming_chain = Some(output::create_output_chain(&self.config.output));
         *state = State::Streaming {
             started_at: std::time::Instant::now(),
@@ -4047,6 +4052,10 @@ impl Daemon {
         let mut streaming_handle: Option<StreamHandle> = None;
         let mut streaming_session: Option<StreamingSession> = None;
         let mut streaming_chain: Option<Vec<Box<dyn TextOutput>>> = None;
+        let mut dictation_field =
+            output::input_method::daemon_integration::DictationFieldIntegration::new(
+                &self.config.output,
+            );
 
         // Persistent poll timers for the recording and transcribing arms. A
         // `sleep()` arm is rebuilt every loop iteration, so it competes with
@@ -4778,6 +4787,18 @@ impl Daemon {
                 }, if self.transcription_task.is_some() => {
                     self.transcription_task = None;
                     self.handle_transcription_result(&mut state, result).await;
+                }
+
+                focused_field = dictation_field.next_focused_field() => {
+                    if dictation_field.session_field_lost(focused_field, state.is_streaming(), streaming_session.as_ref()) {
+                        self.stop_active_recording(
+                            &mut state,
+                            &mut audio_capture,
+                            &mut streaming_session,
+                            &mut streaming_chain,
+                            &mut eager_transcriber,
+                        ).await;
+                    }
                 }
 
                 // Streaming event pump (active only while State::Streaming).

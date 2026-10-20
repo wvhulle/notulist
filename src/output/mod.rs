@@ -25,6 +25,7 @@ pub mod clipboard;
 pub mod dotool;
 pub mod eitype;
 pub mod held_modifier_safety;
+pub mod input_method;
 // modifier_guard is evdev-based; macOS has its own osascript modifier handling.
 #[cfg(target_os = "linux")]
 pub mod modifier_guard;
@@ -243,6 +244,7 @@ pub trait TextOutput: Send + Sync {
 /// Default driver order for type mode
 #[cfg(not(target_os = "macos"))]
 const DEFAULT_DRIVER_ORDER: &[OutputDriver] = &[
+    OutputDriver::InputMethod,
     OutputDriver::Wtype,
     OutputDriver::Eitype,
     OutputDriver::Dotool,
@@ -294,7 +296,24 @@ fn create_driver_output(
             Box::new(clipboard::ClipboardOutput::new(config.append_text.clone()))
         }
         OutputDriver::Xclip => Box::new(xclip::XclipOutput::new(config.append_text.clone())),
+        OutputDriver::InputMethod => Box::new(input_method::InputMethodOutput),
     }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn input_method_driver_requested(config: &OutputConfig) -> bool {
+    cfg!(feature = "input-method")
+        && config.mode == crate::config::OutputMode::Type
+        && config
+            .driver_order
+            .as_deref()
+            .unwrap_or(DEFAULT_DRIVER_ORDER)
+            .contains(&OutputDriver::InputMethod)
+}
+
+#[cfg(target_os = "macos")]
+pub fn input_method_driver_requested(_config: &OutputConfig) -> bool {
+    false
 }
 
 /// Factory function that returns a fallback chain of output methods

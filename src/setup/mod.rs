@@ -409,6 +409,7 @@ pub fn configured_primary_method(
             OutputDriver::Ydotool => status.ydotool.available,
             OutputDriver::Clipboard => status.wl_copy.available,
             OutputDriver::Xclip => status.xclip.available,
+            OutputDriver::InputMethod => cfg!(feature = "input-method"),
         };
         if available {
             return Some(match driver {
