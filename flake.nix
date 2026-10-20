@@ -32,6 +32,7 @@
         commonBuildInputs = with pkgs; [
           alsa-lib
           openssl
+          wayland
         ];
 
         # Cargo.lock contains four crates from the same pinned openvino-rs Git
@@ -152,7 +153,7 @@
             LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 
             # Build with specified features
-            buildFeatures = features;
+            buildFeatures = pkgs.lib.optional pkgs.stdenv.hostPlatform.isLinux "input-method" ++ features;
 
             # Ensure reproducible builds targeting AVX2-capable CPUs (x86-64-v3)
             # This matches the portable AVX2 binaries we ship for other distros
