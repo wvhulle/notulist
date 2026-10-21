@@ -1,8 +1,8 @@
 use super::{
-    AudioConfig, CohereConfig, DolphinConfig, HotkeyConfig, MeetingConfig, MoonshineConfig,
-    OmnilingualConfig, OpenVinoConfig, OutputConfig, ParaformerConfig, ParakeetConfig, Profile,
-    SenseVoiceConfig, SonioxConfig, StatusConfig, StreamingConfig, TextConfig, TranscriptionEngine,
-    VadConfig, WhisperConfig,
+    AudioConfig, CohereConfig, DolphinConfig, HotkeyConfig, InputMethodIndicatorConfig,
+    MeetingConfig, MoonshineConfig, OmnilingualConfig, OpenVinoConfig, OutputConfig,
+    ParaformerConfig, ParakeetConfig, Profile, SenseVoiceConfig, SonioxConfig, StatusConfig,
+    StreamingConfig, TextConfig, TranscriptionEngine, VadConfig, WhisperConfig,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -106,6 +106,10 @@ pub struct Config {
     #[serde(default = "default_state_file")]
     pub state_file: Option<String>,
 
+    /// Input-method popup indicator configuration.
+    #[serde(default)]
+    pub input_method_indicator: InputMethodIndicatorConfig,
+
     /// Named profiles for context-specific settings
     /// Example: [profiles.slack], [profiles.code]
     /// Use with: `voxtype record start --profile slack`
@@ -136,6 +140,7 @@ impl Default for Config {
             status: StatusConfig::default(),
             osd: crate::osd::config::OsdConfig::default(),
             meeting: MeetingConfig::default(),
+            input_method_indicator: InputMethodIndicatorConfig::default(),
             state_file: default_state_file(),
             profiles: HashMap::new(),
         }

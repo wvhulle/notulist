@@ -10,6 +10,7 @@ mod audio;
 mod default_config;
 mod engines;
 mod hotkey;
+mod input_method_indicator;
 mod language;
 mod load;
 mod meeting;
@@ -33,6 +34,7 @@ pub use engines::{
     TranscriptionEngine,
 };
 pub use hotkey::{ActivationMode, HotkeyConfig};
+pub use input_method_indicator::InputMethodIndicatorConfig;
 pub use language::LanguageConfig;
 pub use load::{load_config, save_config};
 pub use meeting::{

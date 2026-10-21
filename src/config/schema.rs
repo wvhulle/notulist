@@ -3391,7 +3391,7 @@ mod tests {
     ];
 
     /// Tables of arbitrary keys, also a hand edit.
-    const NOT_SETTABLE_TABLES: &[&str] = &["output.language_to_layout."];
+    const NOT_SETTABLE_TABLES: &[&str] = &["output.language_to_layout.", "input_method_indicator."];
 
     fn scalar_leaves(prefix: &str, v: &Json, out: &mut Vec<String>) {
         match v {
