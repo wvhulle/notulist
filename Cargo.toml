@@ -344,6 +344,10 @@ required-features = ["cohere"]
 name = "input_method_dictation_replay"
 required-features = ["input-method"]
 
+[[example]]
+name = "input_method_popup_pointer_probe"
+required-features = ["input-method"]
+
 # TEMPORARY: openvino-genai 0.11.0's WhisperPipeline has no way to pass
 # device properties (CACHE_DIR etc.), unlike LlmPipeline/VlmPipeline in
 # the same crate which already expose with_properties(). Pinned to a
