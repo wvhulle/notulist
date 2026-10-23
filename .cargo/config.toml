@@ -1,4 +1,0 @@
-[alias]
-xtask = "run --package xtask --"
-input-method-probe = "run --features input-method --example input_method_popup_pointer_probe"
-input-method-replay = "run --features input-method --example input_method_dictation_replay"

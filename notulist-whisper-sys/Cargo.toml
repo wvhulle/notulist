@@ -1,0 +1,11 @@
+[package]
+name = "notulist-whisper-sys"
+description = "Raw bindings to a system whisper.cpp found through pkg-config"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+links = "whisper"
+
+[build-dependencies]
+bindgen = "0.72"
+pkg-config = "0.3"

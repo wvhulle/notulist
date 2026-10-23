@@ -1,7 +1,0 @@
-# Whisper Models
-
-Download models from https://huggingface.co/ggerganov/whisper.cpp/tree/main
-
-Place .bin files in this directory.
-
-Recommended: ggml-base.en.bin (~142 MB)

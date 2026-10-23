@@ -1,65 +1,161 @@
-# NixOS module for VoxType
-#
-# This module installs the VoxType package system-wide.
-# For the systemd user service and full configuration, use the Home Manager module.
-#
-# Usage in your configuration.nix or flake:
-#
-#   imports = [ voxtype.nixosModules.default ];
-#
-#   programs.voxtype = {
-#     enable = true;
-#     package = voxtype.packages.${system}.vulkan;
-#   };
-#
-# For the systemd service, use the Home Manager module with service.enable = true:
-#
-#   imports = [ voxtype.homeManagerModules.default ];
-#
-#   programs.voxtype = {
-#     enable = true;
-#     package = voxtype.packages.${system}.vulkan;
-#     service.enable = true;  # Creates systemd user service with correct Nix store path
-#   };
-#
-# For evdev hotkey support, add your user to the input group:
-#   users.users.yourname.extraGroups = [ "input" ];
-#
-# For ydotool backend, enable the NixOS ydotool module:
-#   programs.ydotool.enable = true;
-#
-{ config, lib, pkgs, ... }:
-
+notulistFlake:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
-  cfg = config.programs.voxtype;
-in {
-  options.programs.voxtype = {
-    enable = lib.mkEnableOption "VoxType voice-to-text";
+  cfg = config.programs.notulist;
+  whisperModels = import ./whisper-models.nix;
+  tomlFormat = pkgs.formats.toml { };
+  hostSystem = pkgs.stdenv.hostPlatform.system;
+
+  fetchedWhisperModel = pkgs.fetchurl {
+    name = "ggml-${cfg.whisperModel}.bin";
+    inherit (whisperModels.${cfg.whisperModel}) url hash;
+  };
+
+  modelSettings = lib.optionalAttrs (cfg.whisperModel != null) {
+    daemon.whisper.model = "${fetchedWhisperModel}";
+  };
+
+  notulistConfigFile = tomlFormat.generate "notulist-config.toml" (
+    lib.recursiveUpdate modelSettings cfg.settings
+  );
+
+  configuredVideoDrivers = config.services.xserver.videoDrivers;
+
+  detectedAcceleration =
+    if lib.elem "nvidia" configuredVideoDrivers then
+      "cuda"
+    else if lib.elem "amdgpu" configuredVideoDrivers then
+      "vulkan"
+    else
+      "cpu";
+
+  whisperModelForAcceleration = {
+    cuda = "large-v3-turbo";
+    vulkan = "small";
+    cpu = "base";
+  };
+
+  graphicalSessionUnit = {
+    partOf = [ "graphical-session.target" ];
+    wantedBy = [ "graphical-session.target" ];
+    restartTriggers = [ notulistConfigFile ];
+  };
+in
+{
+  options.programs.notulist = {
+    enable = lib.mkEnableOption "notulist streaming whisper dictation for every graphical session";
+
+    acceleration = lib.mkOption {
+      type = lib.types.enum [
+        "cpu"
+        "cuda"
+        "vulkan"
+      ];
+      default = detectedAcceleration;
+      defaultText = lib.literalMD ''
+        `cuda` when `services.xserver.videoDrivers` contains `nvidia`, `vulkan` when it contains
+        `amdgpu`, otherwise `cpu`
+      '';
+      description = ''
+        Which prebuilt whisper.cpp from nixpkgs notulist links against. Set `vulkan` explicitly
+        for Intel GPUs that handle it well.
+      '';
+    };
 
     package = lib.mkOption {
       type = lib.types.package;
+      default = notulistFlake.packages.${hostSystem}.${cfg.acceleration};
+      defaultText = lib.literalExpression "notulist.packages.\${system}.\${config.programs.notulist.acceleration}";
+      description = "The notulist package providing the `notulist` and `notulist-ime` binaries.";
+    };
+
+    whisperModel = lib.mkOption {
+      type = lib.types.nullOr (lib.types.enum (lib.attrNames whisperModels));
+      default = whisperModelForAcceleration.${cfg.acceleration};
+      defaultText = lib.literalMD "`large-v3-turbo` for `cuda`, `small` for `vulkan`, `base` for `cpu`";
+      example = "medium";
       description = ''
-        The VoxType package to install. Use the flake's wrapped packages:
-
-        Whisper packages:
-        - packages.default: CPU-only Whisper
-        - packages.vulkan: Vulkan GPU acceleration
-        - packages.rocm: ROCm/HIP acceleration (AMD)
-
-        ONNX packages (Parakeet, Moonshine, SenseVoice, Paraformer, Dolphin, Omnilingual):
-        - packages.onnx: CPU-only ONNX engines
-        - packages.onnx-cuda: CUDA acceleration (NVIDIA)
-        - packages.onnx-rocm: ROCm acceleration (AMD, Parakeet only)
-
-        These packages include all runtime dependencies (wtype, dotool, ydotool, etc.)
-        in their PATH.
+        Whisper model to download into the Nix store and pass as `[daemon.whisper] model`.
+        Set to null to point `settings.daemon.whisper.model` at your own file instead.
       '';
-      example = lib.literalExpression "voxtype.packages.\${system}.vulkan";
+    };
+
+    settings = lib.mkOption {
+      inherit (tomlFormat) type;
+      default = { };
+      example = lib.literalExpression ''
+        {
+          daemon.whisper.languages = [ "en" "nl" ];
+          daemon.streaming.revise_recent_words = true;
+          ime.popup.level_meter.bar_count = 8;
+          ime.popup.phase_styles.hearing.colour = "#88c0d0";
+        }
+      '';
+      description = ''
+        Contents of the notulist config file shared by the daemon (`daemon` table) and the
+        input method (`ime` table); see the notulist README for every key.
+      '';
+    };
+
+    useCudaBinaryCache = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Trust the NixOS CUDA binary cache when `acceleration` is `cuda`, so the CUDA build of
+        whisper.cpp is downloaded prebuilt instead of compiled.
+      '';
     };
   };
 
   config = lib.mkIf cfg.enable {
-    # Install VoxType (runtime deps are already in the wrapped package's PATH)
+    nix.settings = lib.mkIf (cfg.useCudaBinaryCache && cfg.acceleration == "cuda") {
+      substituters = [ "https://cache.nixos-cuda.org" ];
+      trusted-public-keys = [ "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M=" ];
+    };
+
     environment.systemPackages = [ cfg.package ];
+
+    environment.etc."xdg/notulist/config.toml".source = notulistConfigFile;
+
+    hardware.uinput.enable = true;
+
+    services.udev.extraRules = ''
+      KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess"
+    '';
+
+    systemd.user.services.notulist = graphicalSessionUnit // {
+      description = "notulist dictation daemon";
+      after = [
+        "graphical-session.target"
+        "pipewire.service"
+      ];
+      serviceConfig = {
+        Type = "dbus";
+        BusName = "io.github.wvhulle.Notulist";
+        ExecStart = "${lib.getExe' cfg.package "notulist"} --config ${notulistConfigFile} daemon";
+        Restart = "on-failure";
+        RestartSec = 2;
+      };
+    };
+
+    systemd.user.services.notulist-ime = graphicalSessionUnit // {
+      description = "notulist input method and dictation popup";
+      after = [
+        "graphical-session.target"
+        "notulist.service"
+      ];
+      wants = [ "notulist.service" ];
+      path = [ pkgs.dotool ];
+      serviceConfig = {
+        ExecStart = "${lib.getExe' cfg.package "notulist-ime"} --config ${notulistConfigFile}";
+        Restart = "always";
+        RestartSec = 2;
+      };
+    };
   };
 }
