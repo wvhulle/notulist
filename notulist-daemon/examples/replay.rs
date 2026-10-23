@@ -35,6 +35,7 @@ struct ReplayArgs {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    notulist_daemon::terminal_logging::install_terminal_logging(0);
     match replay(ReplayArgs::parse()).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

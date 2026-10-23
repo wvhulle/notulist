@@ -11,13 +11,12 @@ use wayland_client::{Dispatch, QueueHandle};
 const SLOT_COUNT: usize = 2;
 
 pub fn rgba_to_argb(src: &[u8], dst: &mut [u8]) {
-    dst.chunks_exact_mut(4)
-        .zip(src.chunks_exact(4))
-        .for_each(|(out, px)| {
-            out[0] = px[2];
-            out[1] = px[1];
-            out[2] = px[0];
-            out[3] = px[3];
+    dst.as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(src.as_chunks::<4>().0)
+        .for_each(|(out, [red, green, blue, alpha])| {
+            *out = [*blue, *green, *red, *alpha];
         });
 }
 

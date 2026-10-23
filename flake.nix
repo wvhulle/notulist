@@ -100,10 +100,15 @@
               }
             );
 
+          whisperModels = import ./nix/whisper-models.nix;
+
           devShellFor =
-            whisperCpp:
+            acceleration: whisperCpp:
             craneLib.devShell {
               inputsFrom = [ (buildWorkspace whisperCpp) ];
+              NOTULIST_WHISPER_MODEL = "${whisperModels.fetchWhisperModel pkgs.fetchurl
+                whisperModels.defaultWhisperModelForAcceleration.${acceleration}
+              }";
               packages = imeRuntimeDependencies ++ [
                 pkgs.cargo-nextest
                 pkgs.imv
@@ -114,7 +119,7 @@
         in
         {
           packages = lib.mapAttrs (_: buildWorkspace) whisperCppByAcceleration;
-          devShells = lib.mapAttrs (_: devShellFor) whisperCppByAcceleration;
+          devShells = lib.mapAttrs devShellFor whisperCppByAcceleration;
         };
     in
     {

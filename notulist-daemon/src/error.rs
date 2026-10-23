@@ -52,6 +52,14 @@ pub enum TranscribeError {
     UnknownModelName,
     #[error("the model path is not valid UTF-8")]
     ModelPathNotUtf8,
+    #[error("the built-in whisper model table is malformed")]
+    ModelTable(#[from] toml::de::Error),
+    #[error("could not download the whisper model")]
+    ModelDownload(#[from] Box<ureq::Error>),
+    #[error("could not store the whisper model")]
+    ModelStorage(#[from] std::io::Error),
+    #[error("the downloaded whisper model has the wrong checksum")]
+    ModelChecksumMismatch,
     #[error("a path, language code or prompt contains a NUL byte")]
     ContainsNulByte(#[from] std::ffi::NulError),
     #[error("whisper.cpp could not load the model; check the file and the GPU backend")]

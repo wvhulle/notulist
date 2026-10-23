@@ -7,17 +7,16 @@ notulistFlake:
 }:
 let
   cfg = config.programs.notulist;
-  whisperModels = import ./whisper-models.nix;
+  inherit (import ./whisper-models.nix)
+    whisperModelNames
+    defaultWhisperModelForAcceleration
+    fetchWhisperModel
+    ;
   tomlFormat = pkgs.formats.toml { };
   hostSystem = pkgs.stdenv.hostPlatform.system;
 
-  fetchedWhisperModel = pkgs.fetchurl {
-    name = "ggml-${cfg.whisperModel}.bin";
-    inherit (whisperModels.${cfg.whisperModel}) url hash;
-  };
-
   modelSettings = lib.optionalAttrs (cfg.whisperModel != null) {
-    daemon.whisper.model = "${fetchedWhisperModel}";
+    daemon.whisper.model = "${fetchWhisperModel pkgs.fetchurl cfg.whisperModel}";
   };
 
   notulistConfigFile = tomlFormat.generate "notulist-config.toml" (
@@ -33,12 +32,6 @@ let
       "vulkan"
     else
       "cpu";
-
-  whisperModelForAcceleration = {
-    cuda = "large-v3-turbo";
-    vulkan = "small";
-    cpu = "base";
-  };
 
   graphicalSessionUnit = {
     partOf = [ "graphical-session.target" ];
@@ -75,8 +68,8 @@ in
     };
 
     whisperModel = lib.mkOption {
-      type = lib.types.nullOr (lib.types.enum (lib.attrNames whisperModels));
-      default = whisperModelForAcceleration.${cfg.acceleration};
+      type = lib.types.nullOr (lib.types.enum whisperModelNames);
+      default = defaultWhisperModelForAcceleration.${cfg.acceleration};
       defaultText = lib.literalMD "`large-v3-turbo` for `cuda`, `small` for `vulkan`, `base` for `cpu`";
       example = "medium";
       description = ''

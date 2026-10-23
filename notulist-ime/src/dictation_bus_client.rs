@@ -122,7 +122,10 @@ impl DictationBusClient {
     async fn refresh_daemon_phase(&mut self) {
         match self.proxy.current_phase().await {
             Ok(phase) => self.show_phase(phase),
-            Err(_) => self.daemon_went_away(),
+            Err(error) => {
+                tracing::warn!(%error, "No notulist daemon on the session bus; start it with `notulist daemon`");
+                self.daemon_went_away();
+            }
         }
     }
 
@@ -132,6 +135,12 @@ impl DictationBusClient {
     }
 
     fn show_phase(&mut self, phase: DictationPhase) {
+        tracing::info!(phase = phase.label(), "Daemon phase");
+        if phase == DictationPhase::Failed {
+            tracing::warn!(
+                "The notulist daemon is in the failed phase; its own log names the cause (for example a missing model or microphone)"
+            );
+        }
         if phase == DictationPhase::Listening {
             self.level_bars.clear();
             if self.session.is_none() {

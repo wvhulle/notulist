@@ -1,11 +1,10 @@
-use std::path::PathBuf;
-
 use super::whisper_model_context::{
     language_code_for_id, language_id_for_code, ContextOptions, DecodingRequest, DecodingState,
     WhisperModelContext,
 };
+use super::whisper_model_files::locate_or_download_model;
 use super::Transcriber;
-use crate::config::{models_dir, LanguageConfig, WhisperConfig};
+use crate::config::{LanguageConfig, WhisperConfig};
 use crate::error::TranscribeError;
 
 const SAMPLE_RATE_HZ: f32 = 16_000.0;
@@ -26,7 +25,7 @@ struct LanguageChoice {
 
 impl WhisperTranscriber {
     pub fn new(config: &WhisperConfig) -> Result<Self, TranscribeError> {
-        let model_path = resolve_model_path(&config.model)?;
+        let model_path = locate_or_download_model(&config.model)?;
 
         tracing::info!("Loading whisper model from {:?}", model_path);
         let start = std::time::Instant::now();
@@ -228,53 +227,6 @@ fn is_degenerate_transcript(text: &str) -> bool {
     }
 
     !trimmed.chars().any(|c| c.is_alphanumeric())
-}
-
-fn resolve_model_path(model: &str) -> Result<PathBuf, TranscribeError> {
-    let path = PathBuf::from(model);
-    if path.is_absolute() && path.exists() {
-        return Ok(path);
-    }
-
-    let model_filename = match model {
-        "tiny" => "ggml-tiny.bin",
-        "tiny.en" => "ggml-tiny.en.bin",
-        "base" => "ggml-base.bin",
-        "base.en" => "ggml-base.en.bin",
-        "small" => "ggml-small.bin",
-        "small.en" => "ggml-small.en.bin",
-        "medium" => "ggml-medium.bin",
-        "medium.en" => "ggml-medium.en.bin",
-        "large" | "large-v1" => "ggml-large-v1.bin",
-        "large-v2" => "ggml-large-v2.bin",
-        "large-v3" => "ggml-large-v3.bin",
-        "large-v3-turbo" => "ggml-large-v3-turbo.bin",
-        other if other.ends_with(".bin") => other,
-        other => {
-            tracing::error!(
-                model = other,
-                "Unknown model name; valid names: tiny, base, small, medium, large-v3, large-v3-turbo"
-            );
-            return Err(TranscribeError::UnknownModelName);
-        }
-    };
-
-    let model_path = models_dir().join(model_filename);
-    let cwd_path = PathBuf::from(model_filename);
-    let local_models_path = PathBuf::from("models").join(model_filename);
-    let candidates = [model_path, cwd_path, local_models_path];
-
-    match candidates.into_iter().find(|candidate| candidate.exists()) {
-        Some(found) => Ok(found),
-        None => {
-            tracing::error!(
-                model,
-                searched = ?["models directory", "current directory", "./models"],
-                "Model file not found; download it from https://huggingface.co/ggerganov/whisper.cpp/tree/main"
-            );
-            Err(TranscribeError::ModelNotFound)
-        }
-    }
 }
 
 fn calculate_audio_ctx(duration_secs: f32) -> Option<i32> {

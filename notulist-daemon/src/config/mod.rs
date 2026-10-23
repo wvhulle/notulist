@@ -33,8 +33,22 @@ struct ConfigFile {
     daemon: DaemonConfig,
 }
 
+const WHISPER_MODEL_ENVIRONMENT_VARIABLE: &str = "NOTULIST_WHISPER_MODEL";
+
 impl DaemonConfig {
     pub fn load(explicit_path: Option<&Path>) -> Result<Self, ConfigError> {
+        let mut config = Self::load_file(explicit_path)?;
+        if let Ok(model) = std::env::var(WHISPER_MODEL_ENVIRONMENT_VARIABLE) {
+            tracing::info!(
+                model,
+                "Using the whisper model from {WHISPER_MODEL_ENVIRONMENT_VARIABLE}"
+            );
+            config.whisper.model = model;
+        }
+        Ok(config)
+    }
+
+    fn load_file(explicit_path: Option<&Path>) -> Result<Self, ConfigError> {
         let Some(path) = explicit_path
             .map(Path::to_path_buf)
             .or_else(default_config_path)

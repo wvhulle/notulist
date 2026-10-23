@@ -2,6 +2,7 @@ pub mod sliding_window;
 pub mod streaming;
 pub mod whisper;
 mod whisper_model_context;
+mod whisper_model_files;
 
 use crate::error::TranscribeError;
 

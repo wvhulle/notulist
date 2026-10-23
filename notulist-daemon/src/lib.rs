@@ -8,5 +8,6 @@ pub mod dictation_session_pipeline;
 pub mod dictation_signal_emitter;
 pub mod error;
 pub mod spoken_text_processor;
+pub mod terminal_logging;
 pub mod transcribe;
 pub mod wav_file_transcription;

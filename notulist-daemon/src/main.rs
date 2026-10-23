@@ -6,8 +6,8 @@ use notulist_daemon::config::DaemonConfig;
 use notulist_daemon::dictation_cli::{self, RecordAction};
 use notulist_daemon::dictation_daemon::DictationDaemon;
 use notulist_daemon::error::DaemonError;
+use notulist_daemon::terminal_logging::install_terminal_logging;
 use notulist_daemon::wav_file_transcription::transcribe_wav_file;
-use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(
@@ -53,7 +53,7 @@ enum NotulistCommand {
 #[tokio::main]
 async fn main() -> Result<(), DaemonError> {
     let cli = NotulistCli::parse();
-    initialize_logging(cli.verbose);
+    install_terminal_logging(cli.verbose);
     match cli.command {
         NotulistCommand::Daemon => run_daemon(DaemonConfig::load(cli.config.as_deref())?).await,
         NotulistCommand::Record { action, wait } => dictation_cli::record(action, wait).await,
@@ -64,22 +64,6 @@ async fn main() -> Result<(), DaemonError> {
             Ok(())
         }
     }
-}
-
-fn initialize_logging(verbosity: u8) {
-    let level = match verbosity {
-        0 => "info",
-        1 => "debug",
-        _ => "trace",
-    };
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(format!("notulist={level},warn"))),
-        )
-        .with_target(false)
-        .with_writer(std::io::stderr)
-        .init();
 }
 
 async fn run_daemon(config: DaemonConfig) -> Result<(), DaemonError> {
