@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["notulist-client", "notulist-daemon", "notulist-ime", "notulist-whisper-sys"]
+members = ["notulist-client", "notulist-input", "notulist-server", "notulist-whisper-sys"]
 
 [workspace.package]
 version = "0.1.0"

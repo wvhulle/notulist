@@ -64,13 +64,13 @@ in
       type = lib.types.package;
       default = notulistFlake.packages.${hostSystem}.${cfg.acceleration};
       defaultText = lib.literalExpression "notulist.packages.\${system}.\${config.programs.notulist.acceleration}";
-      description = "The notulist package providing the `notulist` and `notulist-ime` binaries.";
+      description = "The notulist package providing the `notulist-server` and `notulist-input` binaries.";
     };
 
     whisperModel = lib.mkOption {
       type = lib.types.nullOr (lib.types.enum whisperModelNames);
       default = defaultWhisperModelForAcceleration.${cfg.acceleration};
-      defaultText = lib.literalMD "`large-v3-turbo` for `cuda`, `small` for `vulkan`, `base` for `cpu`";
+      defaultText = lib.literalMD "`large-v3-turbo` for `cuda` and `vulkan`, `base` for `cpu`";
       example = "medium";
       description = ''
         Whisper model to download into the Nix store and pass as `[daemon.whisper] model`.
@@ -103,6 +103,16 @@ in
         whisper.cpp is downloaded prebuilt instead of compiled.
       '';
     };
+
+    shortcutListener.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Let the logged-in user read keyboard input devices, so the daemon can listen for the
+        `[daemon.shortcut]` chord (Super+V by default) without joining the `input` group.
+        This also lets any other program of the active user read keystrokes.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -119,10 +129,13 @@ in
 
     services.udev.extraRules = ''
       KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess"
+    ''
+    + lib.optionalString cfg.shortcutListener.enable ''
+      SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"
     '';
 
-    systemd.user.services.notulist = graphicalSessionUnit // {
-      description = "notulist dictation daemon";
+    systemd.user.services.notulist-server = graphicalSessionUnit // {
+      description = "notulist dictation server";
       after = [
         "graphical-session.target"
         "pipewire.service"
@@ -130,22 +143,22 @@ in
       serviceConfig = {
         Type = "dbus";
         BusName = "io.github.wvhulle.Notulist";
-        ExecStart = "${lib.getExe' cfg.package "notulist"} --config ${notulistConfigFile} daemon";
+        ExecStart = "${lib.getExe' cfg.package "notulist-server"} --config ${notulistConfigFile}";
         Restart = "on-failure";
         RestartSec = 2;
       };
     };
 
-    systemd.user.services.notulist-ime = graphicalSessionUnit // {
+    systemd.user.services.notulist-input = graphicalSessionUnit // {
       description = "notulist input method and dictation popup";
       after = [
         "graphical-session.target"
-        "notulist.service"
+        "notulist-server.service"
       ];
-      wants = [ "notulist.service" ];
+      wants = [ "notulist-server.service" ];
       path = [ pkgs.dotool ];
       serviceConfig = {
-        ExecStart = "${lib.getExe' cfg.package "notulist-ime"} --config ${notulistConfigFile}";
+        ExecStart = "${lib.getExe' cfg.package "notulist-input"} --config ${notulistConfigFile}";
         Restart = "always";
         RestartSec = 2;
       };

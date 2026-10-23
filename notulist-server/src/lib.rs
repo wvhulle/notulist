@@ -1,0 +1,14 @@
+pub mod audio;
+pub mod config;
+pub mod dbus_dictation_service;
+pub mod dictation_cli;
+pub mod dictation_daemon;
+pub mod dictation_session_controller;
+pub mod dictation_session_pipeline;
+pub mod dictation_signal_emitter;
+pub mod error;
+pub mod keyboard_shortcut;
+pub mod spoken_text_processor;
+pub mod terminal_logging;
+pub mod transcribe;
+pub mod wav_file_transcription;

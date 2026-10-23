@@ -94,7 +94,7 @@
                 meta = {
                   description = "Streaming whisper dictation daemon and Wayland input method";
                   license = lib.licenses.mit;
-                  mainProgram = "notulist";
+                  mainProgram = "notulist-server";
                   platforms = supportedSystems;
                 };
               }
@@ -109,6 +109,7 @@
               NOTULIST_WHISPER_MODEL = "${whisperModels.fetchWhisperModel pkgs.fetchurl
                 whisperModels.defaultWhisperModelForAcceleration.${acceleration}
               }";
+              NOTULIST_WHISPER_LANGUAGES = "en,nl";
               packages = imeRuntimeDependencies ++ [
                 pkgs.cargo-nextest
                 pkgs.imv

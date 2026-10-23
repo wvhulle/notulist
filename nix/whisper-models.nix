@@ -1,12 +1,12 @@
 let
-  whisperModelTable = builtins.fromTOML (builtins.readFile ../notulist-daemon/whisper-models.toml);
+  whisperModelTable = builtins.fromTOML (builtins.readFile ../notulist-server/whisper-models.toml);
 in
 {
   whisperModelNames = builtins.attrNames whisperModelTable.models;
 
   defaultWhisperModelForAcceleration = {
     cuda = "large-v3-turbo";
-    vulkan = "small";
+    vulkan = "large-v3-turbo";
     cpu = "base";
   };
 
